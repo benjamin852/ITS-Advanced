@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 contract AccessControl is AccessControlUpgradeable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
