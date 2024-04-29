@@ -1,13 +1,50 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./NativeTokenV1.sol";
 
-// import "./AccessControl.sol";
+contract TokenFactory {
+    function getEncodedBytecode(
+        address _accessControl,
+        uint256 _burnRate,
+        uint256 _txFeeRate
+    ) public pure returns (bytes memory) {
+        bytes memory bytecode = type(NativeTokenV1).creationCode;
 
-// EX -> https://github.com/mountainprotocol/tokens/blob/main/contracts/USDM.sol
-// EX2 -> https://github.com/Cyfrin/foundry-defi-stablecoin-f23/blob/main/src/DSCEngine.sol
+        bytes memory constructorParams = abi.encode(
+            _accessControl,
+            _burnRate,
+            _txFeeRate
+        );
+
+        return bytes.concat(bytecode, constructorParams);
+    }
+
+    function deployOtherContract(
+        address _accessControl,
+        uint256 _burnRate,
+        uint256 _txFeeRate
+    ) public returns (address) {
+        // Bytecode + Constructor
+        bytes memory creationCode = getEncodedBytecode(
+            _accessControl,
+            _burnRate,
+            _txFeeRate
+        );
+
+        // Deploy the contract
+        address newContractAddress;
+        assembly {
+            newContractAddress := create(
+                0,
+                add(bytecode, 0x20),
+                mload(bytecode)
+            )
+        }
+        require(
+            newContractAddress != address(0),
+            "Contract deployment failed."
+        );
+        return newContractAddress;
+    }
+}

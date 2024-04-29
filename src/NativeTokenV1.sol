@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Pausable
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-// import "./AccessControl.sol";
+import "./AccessControl.sol";
 
 // EX -> https://github.com/mountainprotocol/tokens/blob/main/contracts/USDM.sol
 // EX2 -> https://github.com/Cyfrin/foundry-defi-stablecoin-f23/blob/main/src/DSCEngine.sol
@@ -30,7 +30,7 @@ contract NativeTokenV1 is
         STORAGE
     /*************/
 
-    // AccessControl public s_accessControl;
+    AccessControl public s_accessControl;
 
     uint256 public s_burnRate;
     uint256 public s_txFeeRate;
@@ -47,16 +47,16 @@ contract NativeTokenV1 is
        MODIFIERS
     /*************/
 
-    // modifier isAdmin() {
-    //     if (s_accessControl.isAdmin(msg.sender)) revert OnlyAdmin();
-    //     _;
-    // }
+    modifier isAdmin() {
+        if (s_accessControl.isAdmin(msg.sender)) revert OnlyAdmin();
+        _;
+    }
 
-    // modifier isBlacklisted(address _receiver) {
-    //     if (s_accessControl.isBlacklistedReceiver(_receiver))
-    //         revert Blacklisted();
-    //     _;
-    // }
+    modifier isBlacklisted(address _receiver) {
+        if (s_accessControl.isBlacklistedReceiver(_receiver))
+            revert Blacklisted();
+        _;
+    }
 
     /*************\
      INITIALIZATION
@@ -68,6 +68,7 @@ contract NativeTokenV1 is
     }
 
     function initialize(
+        AccessControl _accessControl,
         uint256 _burnRate,
         uint256 _txFeeRate
     ) public initializer {
@@ -76,6 +77,7 @@ contract NativeTokenV1 is
         __ERC20Pausable_init();
         __ERC20Permit_init("Interchain Token");
 
+        s_accessControl = _accessControl;
         s_burnRate = _burnRate;
         s_txFeeRate = _txFeeRate;
     }
@@ -84,23 +86,23 @@ contract NativeTokenV1 is
        EXTERNAL FUNCTIONALITY
     \***************************/
 
-    function pause() external /*isAdmin*/ {
+    function pause() external isAdmin {
         _pause();
     }
 
-    function unpause() external /*isAdmin*/ {
+    function unpause() external isAdmin {
         _unpause();
     }
 
-    function setBurnRate(uint256 newBurnRate) external /*isAdmin*/ {
+    function setBurnRate(uint256 newBurnRate) external isAdmin {
         s_burnRate = newBurnRate;
     }
 
-    function setTxFee(uint256 newRewardRate) external /*isAdmin*/ {
+    function setTxFee(uint256 newRewardRate) external isAdmin {
         s_txFeeRate = newRewardRate;
     }
 
-    function mint(address _to, uint256 _amount) public /*isBlacklisted(_to)*/ {
+    function mint(address _to, uint256 _amount) public isBlacklisted(_to) {
         _mint(_to, _amount);
     }
 
