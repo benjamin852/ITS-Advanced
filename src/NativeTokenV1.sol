@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUp
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "./AccessControl.sol";
+import "./SemiNativeToken.sol";
 
 // EX -> https://github.com/mountainprotocol/tokens/blob/main/contracts/USDM.sol
 // EX2 -> https://github.com/Cyfrin/foundry-defi-stablecoin-f23/blob/main/src/DSCEngine.sol
@@ -111,6 +112,11 @@ contract NativeTokenV1 is
         s_rewardPool -= reward;
         _mint(msg.sender, reward);
         emit RewardClaimed(msg.sender, reward);
+    }
+
+    function wrapToSemiNative(uint256 _amount) external {
+        //1. approve(address(semiNative), _amount); -> semi native can now spend native
+        //2. semiNative.interchainTransfer(_amount)
     }
 
     /***************************\
