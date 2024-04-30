@@ -44,6 +44,9 @@ contract TokenFactory is Create3Deployer, Initializable {
     /*************\
         EVENTS
     /*************/
+    event NativeTokenDeployed();
+    event MultichainTokenDeployed();
+    event OwnershipClaimed();
 
     /*************\
      INITIALIZATION
@@ -89,8 +92,19 @@ contract TokenFactory is Create3Deployer, Initializable {
     ) external payable {
         uint256 SEMI_NATIVE_SALT = 123;
 
+        //1. deploy manager remote for address
+        bytes32 multichainTokenId = s_its.deployTokenManager(
+            bytes32(SEMI_NATIVE_SALT),
+            _destChain,
+            ITokenManagerType.TokenManagerType.MINT_BURN,
+            _params,
+            msg.value
+        );
+
         // Bytecode + Constructor
-        bytes memory creationCode = _getEncodedBytecodeSemiNative();
+        bytes memory creationCode = _getEncodedBytecodeSemiNative(
+            multichainTokenId
+        );
 
         bytes memory gmpPayload = abi.encode(
             _destChain,
@@ -99,22 +113,13 @@ contract TokenFactory is Create3Deployer, Initializable {
             _params
         );
 
-        //1. compute address
+        //2. get computed multichainToken address
         (, address multichainTokenAddress) = abi.decode(
             _params,
             (bytes, address)
         );
 
         string memory tokenAddrString = multichainTokenAddress.toString();
-
-        //2. deploy manager remote for address
-        s_its.deployTokenManager(
-            bytes32(SEMI_NATIVE_SALT),
-            _destChain,
-            ITokenManagerType.TokenManagerType.MINT_BURN,
-            _params,
-            msg.value
-        );
 
         //3. send gmp tx to deploy the token
         s_gasService.payNativeGasForContractCall{value: msg.value}(
@@ -155,14 +160,16 @@ contract TokenFactory is Create3Deployer, Initializable {
        INTERNAL FUNCTIONALITY
     \***************************/
 
-    function _getEncodedBytecodeSemiNative()
-        internal
-        view
-        returns (bytes memory)
-    {
+    function _getEncodedBytecodeSemiNative(
+        bytes32 _multichainTokenId
+    ) internal view returns (bytes memory) {
         bytes memory bytecode = type(SemiNativeToken).creationCode;
 
-        bytes memory constructorParams = abi.encode();
+        bytes memory constructorParams = abi.encode(
+            s_its,
+            s_gateway,
+            _multichainTokenId
+        );
 
         return bytes.concat(bytecode, constructorParams);
     }
@@ -170,17 +177,21 @@ contract TokenFactory is Create3Deployer, Initializable {
     function _getEncodedBytecodeNative(
         uint256 _burnRate,
         uint256 _txFeeRate
-    ) internal view returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         bytes memory bytecode = type(NativeTokenV1).creationCode;
 
-        bytes memory constructorParams = abi.encode(_burnRate, _txFeeRate);
+        bytes memory constructorParams = abi.encode(
+            _burnRate,
+            _txFeeRate,
+            address(0)
+        );
 
         return bytes.concat(bytecode, constructorParams);
     }
 
     function _setupInterchainToken() internal {}
 
-    // //on dest chain deploy token manager for new ITS token
+    //on dest chain deploy token manager for new ITS token
     function execute(
         bytes32 _commandId,
         string calldata _sourceChain,
