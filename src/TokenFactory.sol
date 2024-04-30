@@ -46,9 +46,8 @@ contract TokenFactory is Create3Deployer, Initializable {
     /*************\
         EVENTS
     /*************/
-    event NativeTokenDeployed();
-    event MultichainTokenDeployed();
-    event OwnershipClaimed();
+    event NativeTokenDeployed(address tokenAddress);
+    event MultichainTokenDeployed(address tokenAddress);
 
     /*************\
      INITIALIZATION
@@ -155,7 +154,7 @@ contract TokenFactory is Create3Deployer, Initializable {
         // Deploy the contract
         address newToken = _deploy(creationCode, bytes32(NATIVE_SALT));
         if (newToken == address(0)) revert DeploymentFailed();
-
+        emit NativeTokenDeployed(newToken);
         return newToken;
     }
 
@@ -185,6 +184,7 @@ contract TokenFactory is Create3Deployer, Initializable {
         // Deploy the contract
         address newToken = _deploy(creationCode, bytes32(SEMI_NATIVE_SALT));
         if (newToken == address(0)) revert DeploymentFailed();
+        emit MultichainTokenDeployed(newToken);
         s_multichainToken = newToken;
     }
 
