@@ -24,6 +24,7 @@ contract TokenFactory is Create3Deployer, Initializable {
     error DeploymentFailed();
     error OnlyAdmin();
     error NotApprovedByGateway();
+    error MultichainTokenAlreadyDeployed();
 
     /*************\
         STORAGE
@@ -32,6 +33,7 @@ contract TokenFactory is Create3Deployer, Initializable {
     AccessControl public s_accessControl;
     IAxelarGasService public s_gasService;
     IAxelarGateway public s_gateway;
+    address public s_multichainToken;
 
     /*************\
         MODIFIERS
@@ -84,8 +86,8 @@ contract TokenFactory is Create3Deployer, Initializable {
         return abi.encode(abi.encode(msg.sender), multiChainTokenTokenAddress);
     }
 
-    //crosschain semi native deployment
     //exec() will deploy create3 token
+    //crosschain semi native deployment
     function deployRemoteMultichainToken(
         string calldata _destChain,
         bytes calldata _params
@@ -134,10 +136,14 @@ contract TokenFactory is Create3Deployer, Initializable {
     }
 
     //only deploy new token, unrelated to ITS (that is via above function)
+    //same chain
     function deployNative(
         uint256 _burnRate,
         uint256 _txFeeRate
     ) external payable isAdmin returns (address) {
+        if (s_multichainToken != address(0))
+            revert MultichainTokenAlreadyDeployed();
+
         uint256 NATIVE_SALT = 12345;
 
         // Bytecode + Constructor
@@ -153,8 +159,34 @@ contract TokenFactory is Create3Deployer, Initializable {
         return newToken;
     }
 
-    //Deploy interchain token for existing native
-    function connectExistingNativeToITS() external {}
+    //on dest chain deploy token manager for new ITS token
+    function execute(
+        bytes32 _commandId,
+        string calldata _sourceChain,
+        string calldata _sourceAddress,
+        bytes calldata _payload
+    ) external {
+        bytes32 payloadHash = keccak256(_payload);
+
+        if (
+            !s_gateway.validateContractCall(
+                _commandId,
+                _sourceChain,
+                _sourceAddress,
+                payloadHash
+            )
+        ) revert NotApprovedByGateway();
+
+        (uint256 SEMI_NATIVE_SALT, bytes memory creationCode) = abi.decode(
+            _payload,
+            (uint256, bytes)
+        );
+
+        // Deploy the contract
+        address newToken = _deploy(creationCode, bytes32(SEMI_NATIVE_SALT));
+        if (newToken == address(0)) revert DeploymentFailed();
+        s_multichainToken = newToken;
+    }
 
     /***************************\
        INTERNAL FUNCTIONALITY
@@ -187,35 +219,5 @@ contract TokenFactory is Create3Deployer, Initializable {
         );
 
         return bytes.concat(bytecode, constructorParams);
-    }
-
-    function _setupInterchainToken() internal {}
-
-    //on dest chain deploy token manager for new ITS token
-    function execute(
-        bytes32 _commandId,
-        string calldata _sourceChain,
-        string calldata _sourceAddress,
-        bytes calldata _payload
-    ) external {
-        bytes32 payloadHash = keccak256(_payload);
-
-        if (
-            !s_gateway.validateContractCall(
-                _commandId,
-                _sourceChain,
-                _sourceAddress,
-                payloadHash
-            )
-        ) revert NotApprovedByGateway();
-
-        (uint256 SEMI_NATIVE_SALT, bytes memory creationCode) = abi.decode(
-            _payload,
-            (uint256, bytes)
-        );
-
-        // Deploy the contract
-        address newToken = _deploy(creationCode, bytes32(SEMI_NATIVE_SALT));
-        if (newToken == address(0)) revert DeploymentFailed();
     }
 }
