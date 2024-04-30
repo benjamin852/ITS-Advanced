@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "interchain-token-service/interfaces/IInterchainTokenService.sol";
 
 contract SemiNativeToken is
     Initializable,
@@ -22,6 +23,7 @@ contract SemiNativeToken is
     /*************\
         STORAGE
     /*************/
+    IInterchainTokenService s_its;
 
     /*************\
         EVENTS
@@ -47,20 +49,25 @@ contract SemiNativeToken is
         _disableInitializers();
     }
 
-    function initialize() public initializer {
+    function initialize(IInterchainTokenService _its) public initializer {
         __ERC20_init("Semi Native Interchain Token", "SITS");
         __ERC20Burnable_init();
         __Ownable_init(msg.sender);
+        s_its = _its;
     }
 
     /***************************\
        EXTERNAL FUNCTIONALITY
     \***************************/
-    function interchainTransfer(uint256 _amount) external { 
+
+    //for crosschain tx from native || from non native
+    function interchainTransfer(uint256 _amount) external {
         //1. nativeToken.transferFrom(msg.sender, address(this), _amount); -> lock native token in semi native
+        //2. _mint(address(this), _amount) -> mint semi native for locked native
+        //3. s_its.interchainTransfer(source, destination, wallet, tokenId, amount, fee)
     }
 
-    //for crosschain tx
+    //for crosschain tx to native
     function unwrapToNative() external {
         //1. BURN SEMI
         //2. MINT SEMI NATIVE ON DEST CHAIN
@@ -68,7 +75,7 @@ contract SemiNativeToken is
         //4. MINT NATIVE
     }
 
-    //for newly deployed native on same chain
+    //after newly deployed native on same chain
     function claimOwnership() external onlyOwner {
         //1. BURN SEMI NATIVE
         //2. MINT NEWLY DEPLOYED NATIVE TOKEN

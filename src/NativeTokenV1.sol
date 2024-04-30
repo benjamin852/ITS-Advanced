@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Burnable
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import "./AccessControl.sol";
 import "./SemiNativeToken.sol";
 
@@ -30,7 +29,6 @@ contract NativeTokenV1 is
     /*************\
         STORAGE
     /*************/
-
     AccessControl public s_accessControl;
 
     uint256 public s_burnRate;
@@ -78,6 +76,7 @@ contract NativeTokenV1 is
         __ERC20Pausable_init();
         __ERC20Permit_init("Interchain Token");
 
+
         s_accessControl = _accessControl;
         s_burnRate = _burnRate;
         s_txFeeRate = _txFeeRate;
@@ -115,8 +114,7 @@ contract NativeTokenV1 is
     }
 
     function wrapToSemiNative(uint256 _amount) external {
-        //1. approve(address(semiNative), _amount); -> semi native can now spend native
-        //2. semiNative.interchainTransfer(_amount)
+        //1. approve(address(semiNative), _amount); -> semi native can now spend native        
     }
 
     /***************************\
