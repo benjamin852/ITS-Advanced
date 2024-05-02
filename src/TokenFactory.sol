@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "axelar-gmp-sdk-solidity/contracts/deploy/Create3Deployer.sol";
 import "axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGasService.sol";
 import {StringToAddress, AddressToString} from "axelar-gmp-sdk-solidity/contracts/libs/AddressString.sol";
 import "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
@@ -13,11 +12,14 @@ import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "interchain-token-service/interfaces/IInterchainTokenService.sol";
 import "interchain-token-service/interfaces/ITokenManagerType.sol";
 
+// import "axelar-gmp-sdk-solidity/contracts/deploy/Create3.sol";
+import "./helpers/Create3.sol";
 import "./NativeTokenV1.sol";
 import "./MultichainToken.sol";
 import "./AccessControl.sol";
 
-contract TokenFactory is Create3Deployer, Initializable {
+// contract TokenFactory is Create3Deployer, Initializable {
+contract TokenFactory is Initializable, Create3 {
     using AddressToString for address;
 
     /*************\
@@ -70,7 +72,6 @@ contract TokenFactory is Create3Deployer, Initializable {
         s_gasService = _gasService;
         s_its = IInterchainTokenService(address(0));
         s_accessControl = _accessControl;
-
         if (address(_gateway) == address(0)) revert("Invalid Gateway Address");
         s_gateway = _gateway;
     }
@@ -157,10 +158,7 @@ contract TokenFactory is Create3Deployer, Initializable {
 
         // Deploy  implementation
         // address newTokenImpl = _deploy(creationCode, bytes32(NATIVE_SALT_IMPL));
-        address newTokenImpl = _deploy(
-            type(NativeTokenV1).creationCode,
-            bytes32(NATIVE_SALT_IMPL)
-        );
+        address newTokenImpl = _create3Address(bytes32(NATIVE_SALT_IMPL));
         if (newTokenImpl == address(0)) revert DeploymentFailed();
 
         bytes memory proxyCreationCode = _getEncodedCreationCodeNative(
@@ -170,7 +168,7 @@ contract TokenFactory is Create3Deployer, Initializable {
         );
 
         //Deploy proxy
-        newTokenProxy = _deploy(proxyCreationCode, bytes32(NATIVE_SALT_PROXY));
+        newTokenProxy = _create3(proxyCreationCode, bytes32(NATIVE_SALT_PROXY));
         if (newTokenProxy == address(0)) revert DeploymentFailed();
 
         emit NativeTokenDeployed(newTokenImpl);
@@ -201,7 +199,7 @@ contract TokenFactory is Create3Deployer, Initializable {
         );
 
         // Deploy the contract
-        address newToken = _deploy(creationCode, bytes32(SEMI_NATIVE_SALT));
+        address newToken = _create3(creationCode, bytes32(SEMI_NATIVE_SALT));
         if (newToken == address(0)) revert DeploymentFailed();
         emit MultichainTokenDeployed(newToken);
         s_multichainToken = newToken;

@@ -19,9 +19,15 @@ contract Setup is Test, NetworkDetailsBase {
 
     AccessControl public accessControl;
 
-    constructor() {
-        string memory network = vm.envString("NETWORK");
+    string[] networks = [
+        "ethereum",
+        "avalanche",
+        "moonbeam",
+        "fantom",
+        "polygon"
+    ];
 
+    constructor() {
         // Retrieve the private key directly from environment variables
         string memory privateKeyHex = vm.envString("LOCAL_PRIVATE_KEY");
 
@@ -35,12 +41,16 @@ contract Setup is Test, NetworkDetailsBase {
         // Convert the hexadecimal private key to a uint256
         uint256 privateKey = uint256(bytes32(vm.parseBytes(privateKeyHex)));
 
-        (
-            address gateway,
-            address gasService,
-            address create3Deployer,
-            address its
-        ) = getNetworkDetails(network);
+        address gateway;
+        address gasService;
+        address create3Deployer;
+        address its;
+
+        for (uint i = 0; i < networks.length; i++) {
+            (gateway, gasService, create3Deployer, its) = getNetworkDetails(
+                networks[i]
+            );
+        }
 
         address accessProxy = Upgrades.deployTransparentProxy(
             "AccessControl.sol",
@@ -49,7 +59,7 @@ contract Setup is Test, NetworkDetailsBase {
         );
         accessControl = AccessControl(accessProxy);
 
-        address tokenProxy = Upgrades.deployTransparentProxy(
+        address tokenFactory = Upgrades.deployTransparentProxy(
             "TokenFactory.sol",
             vm.addr(1),
             abi.encodeCall(
@@ -62,6 +72,6 @@ contract Setup is Test, NetworkDetailsBase {
                 )
             )
         );
-        // token = IInterchainTokenService();
+        // factory = TokenFactory(tokenFactory);
     }
 }
