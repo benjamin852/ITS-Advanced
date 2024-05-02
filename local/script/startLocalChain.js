@@ -56,6 +56,7 @@ import { ethers } from 'ethers'
         data.gasReceiverAddress
       existingEnvData[`LOCAL_${prefix}_ITS_CONTRACT`] =
         data.InterchainTokenService
+      //MIGHT NEED TO REMOVE THIS SINCE NOT USING ACTUAL CREATE3 DEPLOYER. USING MY OWN
       existingEnvData[`LOCAL_${prefix}_CREATE3_DEPLOYER`] =
         data.create3DeployerAddress
       existingEnvData[`LOCAL_${prefix}_RPC_URL`] = data.rpc

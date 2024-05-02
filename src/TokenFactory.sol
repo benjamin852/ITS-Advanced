@@ -70,9 +70,7 @@ contract TokenFactory is Initializable, Create3 {
     ) public initializer {
         s_its = _its;
         s_gasService = _gasService;
-        s_its = IInterchainTokenService(address(0));
         s_accessControl = _accessControl;
-        if (address(_gateway) == address(0)) revert("Invalid Gateway Address");
         s_gateway = _gateway;
     }
 

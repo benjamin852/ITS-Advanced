@@ -19,6 +19,11 @@ contract Setup is Test, NetworkDetailsBase {
 
     AccessControl public accessControl;
 
+    address public gateway;
+    address public gasService;
+    address public create3Deployer;
+    address public its;
+
     string[] networks = [
         "ethereum",
         "avalanche",
@@ -28,24 +33,6 @@ contract Setup is Test, NetworkDetailsBase {
     ];
 
     constructor() {
-        // Retrieve the private key directly from environment variables
-        string memory privateKeyHex = vm.envString("LOCAL_PRIVATE_KEY");
-
-        // Basic validation to check if the private key is empty
-        if (bytes(privateKeyHex).length == 0) {
-            revert(
-                "LOCAL_PRIVATE_KEY is not set in the environment variables."
-            );
-        }
-
-        // Convert the hexadecimal private key to a uint256
-        uint256 privateKey = uint256(bytes32(vm.parseBytes(privateKeyHex)));
-
-        address gateway;
-        address gasService;
-        address create3Deployer;
-        address its;
-
         for (uint i = 0; i < networks.length; i++) {
             (gateway, gasService, create3Deployer, its) = getNetworkDetails(
                 networks[i]
@@ -72,6 +59,6 @@ contract Setup is Test, NetworkDetailsBase {
                 )
             )
         );
-        // factory = TokenFactory(tokenFactory);
+        factory = TokenFactory(tokenFactory);
     }
 }
