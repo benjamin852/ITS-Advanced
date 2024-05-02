@@ -14,7 +14,7 @@ import "interchain-token-service/interfaces/IInterchainTokenService.sol";
 
 import "./NativeTokenV1.sol";
 
-contract SemiNativeToken is
+contract MultichainToken is
     Initializable,
     ERC20Upgradeable,
     ERC20BurnableUpgradeable,

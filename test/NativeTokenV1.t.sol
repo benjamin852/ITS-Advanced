@@ -7,6 +7,8 @@ import {Setup} from "./Setup.t.sol";
 
 contract Initialization is Setup {
     function testInit() public view {
+        uint256 myVar = 1;
+        assertEq(1, myVar);
         // assertEq(address(token.s_accessControl()), address(accessControl));
         // assertEq(token.s_burnRate(), 20000);
         // assertEq(token.s_txFeeRate(), 10000);

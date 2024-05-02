@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Pausable
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./AccessControl.sol";
-import "./SemiNativeToken.sol";
+import "./MultichainToken.sol";
 
 contract NativeTokenV1 is
     Initializable,

@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "axelar-gmp-sdk-solidity/contracts/deploy/Create3Deployer.sol";
 import "axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGasService.sol";
 import {StringToAddress, AddressToString} from "axelar-gmp-sdk-solidity/contracts/libs/AddressString.sol";
-import {IAxelarGateway} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
+import "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
 import "interchain-token-service/interfaces/IInterchainTokenService.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -14,7 +14,7 @@ import "interchain-token-service/interfaces/IInterchainTokenService.sol";
 import "interchain-token-service/interfaces/ITokenManagerType.sol";
 
 import "./NativeTokenV1.sol";
-import "./SemiNativeToken.sol";
+import "./MultichainToken.sol";
 import "./AccessControl.sol";
 
 contract TokenFactory is Create3Deployer, Initializable {
@@ -214,7 +214,7 @@ contract TokenFactory is Create3Deployer, Initializable {
     function _getEncodedBytecodeSemiNative(
         bytes32 _multichainTokenId
     ) internal view returns (bytes memory) {
-        bytes memory bytecode = type(SemiNativeToken).creationCode;
+        bytes memory bytecode = type(MultichainToken).creationCode;
 
         bytes memory constructorParams = abi.encode(
             s_its,
