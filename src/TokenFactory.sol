@@ -7,7 +7,9 @@ import {StringToAddress, AddressToString} from "axelar-gmp-sdk-solidity/contract
 import {IAxelarGateway} from "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGateway.sol";
 import "interchain-token-service/interfaces/IInterchainTokenService.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "interchain-token-service/interfaces/IInterchainTokenService.sol";
 import "interchain-token-service/interfaces/ITokenManagerType.sol";
 
@@ -60,16 +62,17 @@ contract TokenFactory is Create3Deployer, Initializable {
 
     function initialize(
         IInterchainTokenService _its,
-        AccessControl _accessControl,
         IAxelarGasService _gasService,
-        address _gateway
+        IAxelarGateway _gateway,
+        AccessControl _accessControl
     ) public initializer {
         s_its = _its;
-        s_accessControl = _accessControl;
         s_gasService = _gasService;
+        s_its = IInterchainTokenService(address(0));
+        s_accessControl = _accessControl;
 
-        if (_gateway == address(0)) revert("Invalid Gateway Address");
-        s_gateway = IAxelarGateway(_gateway);
+        if (address(_gateway) == address(0)) revert("Invalid Gateway Address");
+        s_gateway = _gateway;
     }
 
     /***************************\
@@ -139,23 +142,39 @@ contract TokenFactory is Create3Deployer, Initializable {
     function deployNative(
         uint256 _burnRate,
         uint256 _txFeeRate
-    ) external payable isAdmin returns (address) {
+    ) external payable isAdmin returns (address newTokenProxy) {
         if (s_multichainToken != address(0))
             revert MultichainTokenAlreadyDeployed();
 
-        uint256 NATIVE_SALT = 12345;
+        uint256 NATIVE_SALT_IMPL = 123456;
+        uint256 NATIVE_SALT_PROXY = 12345;
 
         // Bytecode + Constructor
-        bytes memory creationCode = _getEncodedBytecodeNative(
+        // bytes memory creationCode = _getEncodedBytecodeNative(
+        //     _burnRate,
+        //     _txFeeRate
+        // );
+
+        // Deploy  implementation
+        // address newTokenImpl = _deploy(creationCode, bytes32(NATIVE_SALT_IMPL));
+        address newTokenImpl = _deploy(
+            type(NativeTokenV1).creationCode,
+            bytes32(NATIVE_SALT_IMPL)
+        );
+        if (newTokenImpl == address(0)) revert DeploymentFailed();
+
+        bytes memory proxyCreationCode = _getEncodedCreationCodeNative(
+            newTokenImpl,
             _burnRate,
             _txFeeRate
         );
 
-        // Deploy the contract
-        address newToken = _deploy(creationCode, bytes32(NATIVE_SALT));
-        if (newToken == address(0)) revert DeploymentFailed();
-        emit NativeTokenDeployed(newToken);
-        return newToken;
+        //Deploy proxy
+        newTokenProxy = _deploy(proxyCreationCode, bytes32(NATIVE_SALT_PROXY));
+        if (newTokenProxy == address(0)) revert DeploymentFailed();
+
+        emit NativeTokenDeployed(newTokenImpl);
+        // return newToken;
     }
 
     //on dest chain deploy token manager for new ITS token
@@ -206,18 +225,33 @@ contract TokenFactory is Create3Deployer, Initializable {
         return bytes.concat(bytecode, constructorParams);
     }
 
-    function _getEncodedBytecodeNative(
+    function _getEncodedCreationCodeNative(
+        address _implementation,
         uint256 _burnRate,
         uint256 _txFeeRate
-    ) internal pure returns (bytes memory) {
-        bytes memory bytecode = type(NativeTokenV1).creationCode;
+    ) internal returns (bytes memory proxyCreationCode) {
+        // bytes memory bytecode = type(NativeTokenV1).creationCode;
 
-        bytes memory constructorParams = abi.encode(
+        // bytes memory constructorParams = abi.encode(
+        //     _burnRate,
+        //     _txFeeRate,
+        //     address(0)
+        // );
+
+        // return bytes.concat(bytecode, constructorParams);
+        // Deploy ProxyAdmin
+        ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
+
+        bytes memory initData = abi.encodeWithSelector(
+            NativeTokenV1.initialize.selector,
+            s_accessControl,
             _burnRate,
-            _txFeeRate,
-            address(0)
+            _txFeeRate
         );
 
-        return bytes.concat(bytecode, constructorParams);
+        proxyCreationCode = abi.encodePacked(
+            type(TransparentUpgradeableProxy).creationCode,
+            abi.encode(_implementation, address(proxyAdmin), initData)
+        );
     }
 }

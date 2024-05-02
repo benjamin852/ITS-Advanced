@@ -9,9 +9,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./AccessControl.sol";
 import "./SemiNativeToken.sol";
 
-// EX -> https://github.com/mountainprotocol/tokens/blob/main/contracts/USDM.sol
-// EX2 -> https://github.com/Cyfrin/foundry-defi-stablecoin-f23/blob/main/src/DSCEngine.sol
-
 contract NativeTokenV1 is
     Initializable,
     ERC20Upgradeable,

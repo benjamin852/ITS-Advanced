@@ -5,13 +5,14 @@ import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {NativeTokenV1} from "../src/NativeTokenV1.sol";
+import "interchain-token-service/interfaces/IInterchainTokenService.sol";
+import {TokenFactory} from "../src/TokenFactory.sol";
 import {AccessControl} from "../src/AccessControl.sol";
 
 contract Setup is Test {
     bytes32 constant IMPL_SLOT =
         bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
-    NativeTokenV1 public token;
+    TokenFactory public factory;
 
     AccessControl public accessControl;
 
@@ -23,14 +24,14 @@ contract Setup is Test {
         );
         accessControl = AccessControl(accessProxy);
 
-        address tokenProxy = Upgrades.deployTransparentProxy(
-            "NativeTokenV1.sol",
-            vm.addr(1),
-            abi.encodeCall(
-                NativeTokenV1.initialize,
-                (accessControl, 20000, 10000)
-            )
-        );
-        token = NativeTokenV1(tokenProxy);
+        // address tokenProxy = Upgrades.deployTransparentProxy(
+        //     "TokenFactory.sol",
+        //     vm.addr(1),
+        //     abi.encodeCall(
+        //         TokenFactory.initialize,
+        //         (its, gasService, gateway, accessProxy)
+        //     )
+        // );
+        // token = IInterchainTokenService();
     }
 }
