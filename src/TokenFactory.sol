@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "interchain-token-service/interfaces/IInterchainTokenService.sol";
 import "interchain-token-service/interfaces/ITokenManagerType.sol";
+import "forge-std/console2.sol";
 
 // import "axelar-gmp-sdk-solidity/contracts/deploy/Create3.sol";
 import "./helpers/Create3.sol";
@@ -28,6 +29,7 @@ contract TokenFactory is Initializable, Create3 {
     error DeploymentFailed();
     error OnlyAdmin();
     error NotApprovedByGateway();
+    error NativeTokenAlreadyDeployed();
     error MultichainTokenAlreadyDeployed();
 
     /*************\
@@ -37,6 +39,7 @@ contract TokenFactory is Initializable, Create3 {
     AccessControl public s_accessControl;
     IAxelarGasService public s_gasService;
     IAxelarGateway public s_gateway;
+    address public s_nativeToken;
     address public s_multichainToken;
 
     /*************\
@@ -95,6 +98,8 @@ contract TokenFactory is Initializable, Create3 {
     ) external payable {
         uint256 SEMI_NATIVE_SALT = 123;
 
+        //Add revert if token already deployed
+
         //1. deploy manager remote for address
         bytes32 multichainTokenId = s_its.deployTokenManager(
             bytes32(SEMI_NATIVE_SALT),
@@ -142,23 +147,19 @@ contract TokenFactory is Initializable, Create3 {
         uint256 _burnRate,
         uint256 _txFeeRate
     ) external payable isAdmin returns (address newTokenProxy) {
-        if (s_multichainToken != address(0))
-            revert MultichainTokenAlreadyDeployed();
+        if (s_nativeToken != address(0)) revert NativeTokenAlreadyDeployed();
 
         uint256 NATIVE_SALT_IMPL = 123456;
         uint256 NATIVE_SALT_PROXY = 12345;
 
-        // Bytecode + Constructor
-        // bytes memory creationCode = _getEncodedBytecodeNative(
-        //     _burnRate,
-        //     _txFeeRate
-        // );
-
         // Deploy  implementation
-        // address newTokenImpl = _deploy(creationCode, bytes32(NATIVE_SALT_IMPL));
-        address newTokenImpl = _create3Address(bytes32(NATIVE_SALT_IMPL));
+        address newTokenImpl = _create3(
+            type(NativeTokenV1).creationCode,
+            bytes32(NATIVE_SALT_IMPL)
+        );
         if (newTokenImpl == address(0)) revert DeploymentFailed();
 
+        // Bytecode + Constructor
         bytes memory proxyCreationCode = _getEncodedCreationCodeNative(
             newTokenImpl,
             _burnRate,
@@ -168,9 +169,8 @@ contract TokenFactory is Initializable, Create3 {
         //Deploy proxy
         newTokenProxy = _create3(proxyCreationCode, bytes32(NATIVE_SALT_PROXY));
         if (newTokenProxy == address(0)) revert DeploymentFailed();
-
-        emit NativeTokenDeployed(newTokenImpl);
-        // return newToken;
+        emit NativeTokenDeployed(newTokenProxy);
+        s_nativeToken = newTokenProxy;
     }
 
     //on dest chain deploy token manager for new ITS token
@@ -203,6 +203,10 @@ contract TokenFactory is Initializable, Create3 {
         s_multichainToken = newToken;
     }
 
+    function getExpectedAddress(bytes32 _salt) public view returns (address) {
+        return _create3Address(_salt);
+    }
+
     /***************************\
        INTERNAL FUNCTIONALITY
     \***************************/
@@ -222,11 +226,11 @@ contract TokenFactory is Initializable, Create3 {
     }
 
     function _getEncodedCreationCodeNative(
-        address _implementation,
+        address _liveImpl,
         uint256 _burnRate,
         uint256 _txFeeRate
     ) internal returns (bytes memory proxyCreationCode) {
-        // bytes memory bytecode = type(NativeTokenV1).creationCode;
+        bytes memory nativeTokenImpl = type(NativeTokenV1).creationCode;
 
         // bytes memory constructorParams = abi.encode(
         //     _burnRate,
@@ -235,6 +239,7 @@ contract TokenFactory is Initializable, Create3 {
         // );
 
         // return bytes.concat(bytecode, constructorParams);
+
         // Deploy ProxyAdmin
         ProxyAdmin proxyAdmin = new ProxyAdmin(msg.sender);
 
@@ -247,7 +252,7 @@ contract TokenFactory is Initializable, Create3 {
 
         proxyCreationCode = abi.encodePacked(
             type(TransparentUpgradeableProxy).creationCode,
-            abi.encode(_implementation, address(proxyAdmin), initData)
+            abi.encode(_liveImpl, address(proxyAdmin), initData)
         );
     }
 }
